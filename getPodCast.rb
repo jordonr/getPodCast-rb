@@ -31,6 +31,7 @@ book_title = ''
 book_link = ''
 book_description = ''
 book_category = []
+img_url = ''
 
 # get the XML data as a string
 begin
@@ -43,18 +44,22 @@ end
 # extract event information
 doc = REXML::Document.new(xml_data)
 
+#get Title
 doc.elements.each('rss/channel/title') do |ele|
    book_title << ele.text
 end
 
+#get Link
 doc.elements.each('rss/channel/link') do |ele|
    book_link << ele.text
 end
 
+#get Description
 doc.elements.each('rss/channel/description') do |ele|
    book_description << ele.text
 end
 
+#get Category
 doc.elements.each('rss/channel/category') do |ele|
    book_category << ele.text
 end
@@ -64,6 +69,17 @@ if(!(File.directory?(book_title)))
 	FileUtils.mkdir book_title
 end
 
+#Get Image
+doc.elements.each('rss/channel/itunes:image') do |ele|
+    img_url << ele.attributes['href']
+    open(img_url) do |img|
+		File.open(book_title + '/' + book_title + '.jpg', 'w') do |fh|
+			fh << img.read
+		end
+	end
+end
+
+#Create Info.txt
 File.open("#{book_title}/info.txt", 'w') do |fh|
 	fh << book_title + "\n\n" 
 	fh << book_link + "\n"
@@ -71,10 +87,11 @@ File.open("#{book_title}/info.txt", 'w') do |fh|
 	fh << book_description
 end
 
-#Title Elements
+#Item Title Elements
 doc.elements.each('rss/channel/item/title') do |ele|
    titles << ele.text
 end
+
 #Get enclosure URLs
 doc.elements.each('rss/channel/item/enclosure') do |ele|
    enclosures << ele.attributes['url']
