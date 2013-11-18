@@ -25,6 +25,7 @@ require 'fileutils'
 #  
 
 url = ARGV[0]
+user_agent = 'Mozilla/5.0'
 titles = []
 enclosures = []
 book_title = ''
@@ -35,7 +36,13 @@ img_url = ''
 
 # get the XML data as a string
 begin
-	xml_data = Net::HTTP.get_response(URI.parse(url)).body
+	#xml_data = Net::HTTP.get_response(URI.parse(url)).body
+	#replaced the single line above because some sites require user agent
+    p_url = URI.parse(url)
+	req = Net::HTTP::Get.new(url)
+	req.add_field('User-Agent',user_agent)
+	res = Net::HTTP.start(p_url.host, p_url.port) {|http| http.request(req)}
+	xml_data = res.body	
 rescue
 	puts "URL is not valid"
 	exit
@@ -47,6 +54,7 @@ doc = REXML::Document.new(xml_data)
 #get Title
 doc.elements.each('rss/channel/title') do |ele|
    book_title << ele.text
+   book_title.gsub(":", "-")
 end
 
 #get Link
@@ -83,7 +91,10 @@ end
 File.open("#{book_title}/info.txt", 'w') do |fh|
 	fh << book_title + "\n\n" 
 	fh << book_link + "\n"
-	fh << book_category[0] + "\n\n"
+	if book_category.count > 0
+		fh << book_category[0] + "\n"
+	end
+	fh << "\n"
 	fh << book_description
 end
 
@@ -100,12 +111,14 @@ end
 # print all events
 titles.each_with_index do |titles, idx|
 	file_name = File.basename(enclosures[idx])
+	file_name.gsub(":", "-")
+	
     print "#{titles} => #{enclosures[idx]} => #{file_name}\n"
     
     if(File.file?(file_name))
 		print "#{file_name} exists!\n"
 	else
-		open(enclosures[idx]) do |mp3|
+		open(enclosures[idx], "User-Agent" => user_agent) do |mp3|
 			File.open(book_title + '/' + file_name, 'w') do |fh|
 				fh << mp3.read
 			end
